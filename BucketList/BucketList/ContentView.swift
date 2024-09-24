@@ -4,10 +4,65 @@
 //
 //  Created by Jesse Sheehan on 9/22/24.
 //
-import LocalAuthentication
+//import LocalAuthentication
 import SwiftUI
-//import MapKit
+import MapKit
 
+//struct ContentView: View {
+//    var body: some View {
+//        Text("Hello, World!")
+//    }
+//}
+
+ //DAY 70 - marking locations on the map, then adding annotations
+struct ContentView: View {
+    
+    let startPosition = MapCameraPosition.region(
+        MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: 56, longitude: -3), span: MKCoordinateSpan(latitudeDelta: 10, longitudeDelta: 10))
+    )
+    
+    @State private var locations = [Location]()
+    @State private var selectedPlace: Location?
+    
+    var body: some View {
+        MapReader { proxy in
+            Map(initialPosition: startPosition) {
+                ForEach(locations) { location in
+                    Annotation(location.name, coordinate: location.coordinate) {
+                        Image(systemName: "star.circle")
+                            .resizable()
+                            .foregroundStyle(.red)
+                            .frame(width: 44, height: 44)
+                            .background(.white)
+                            .clipShape(.circle)
+                            .onLongPressGesture(minimumDuration: 0.1) {
+                                selectedPlace = location
+                            }
+                    }
+                }
+            }
+            .onTapGesture { position in
+                //print("tapped at \(position)")
+                if let coordinate = proxy.convert(position, from: .local) {
+                    //print("tapped at \(coordinate)")
+                   let newLocation = Location(id: UUID(), name: "New Location", description: "", latitude: coordinate.latitude, longitude: coordinate.longitude)
+                    locations.append(newLocation)
+                }
+            }
+            .sheet(item: $selectedPlace) { place in
+                EditView(location: place) { newLocation in
+                    if let index = locations.firstIndex(of: place) {
+                        locations[index] = newLocation
+                    }
+                    //basically it takes the "newLocation" from the locations array and replaces its info with the location from the editView
+                }
+            }
+        }
+    }
+}
+ 
+
+/* //DAY 69 - FACEID/TOUCHID Authentication
 struct ContentView: View {
     
     @State private var isUnlocked = false
@@ -44,6 +99,7 @@ struct ContentView: View {
         }
     }
 }
+*/
 
 /*
 struct Location: Identifiable {
