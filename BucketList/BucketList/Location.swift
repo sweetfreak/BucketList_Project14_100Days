@@ -22,7 +22,7 @@ struct Location: Codable, Equatable, Identifiable {
     //You should make examples in your structs - it's a good practice and makes previewing it easier
     //The #if Debug is great for testing - it won't get compiled into a build!
 #if DEBUG
-    static let example = Location(id: UUID(), name: "New York City", description: "The Big Apple", latitude: 40.7, longitude: 74)
+    static let example = Location(id: UUID(), name: "New York City", description: "The Big Apple", latitude: 40.759296, longitude: -73.985573)
     
     static let example2 = Location(id: UUID(), name: "Buckingham Palace", description: "Lit by over 40,000 light bulbs", latitude: 51.501, longitude: -0.141)
 #endif

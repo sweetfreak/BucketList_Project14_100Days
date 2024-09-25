@@ -8,55 +8,71 @@
 import SwiftUI
 import MapKit
 
-//struct ContentView: View {
-//    var body: some View {
-//        Text("Hello, World!")
-//    }
-//}
 
- //DAY 70 - marking locations on the map, then adding annotations
+
 struct ContentView: View {
     
     let startPosition = MapCameraPosition.region(
         MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: 56, longitude: -3), span: MKCoordinateSpan(latitudeDelta: 10, longitudeDelta: 10))
     )
     
-    @State private var locations = [Location]()
-    @State private var selectedPlace: Location?
+    //MOVED to ViewModel
+//    @State private var locations = [Location]()
+//    @State private var selectedPlace: Location?
+    
+    @State private var viewModel = ViewModel()
     
     var body: some View {
-        MapReader { proxy in
-            Map(initialPosition: startPosition) {
-                ForEach(locations) { location in
-                    Annotation(location.name, coordinate: location.coordinate) {
-                        Image(systemName: "star.circle")
-                            .resizable()
-                            .foregroundStyle(.red)
-                            .frame(width: 44, height: 44)
-                            .background(.white)
-                            .clipShape(.circle)
-                            .onLongPressGesture(minimumDuration: 0.1) {
-                                selectedPlace = location
-                            }
+        if viewModel.isUnlocked {
+            MapReader { proxy in
+                Map(initialPosition: startPosition) {
+                    ForEach(viewModel.locations) { location in
+                        Annotation(location.name, coordinate: location.coordinate) {
+                            Image(systemName: "star.circle")
+                                .resizable()
+                                .foregroundStyle(.red)
+                                .frame(width: 44, height: 44)
+                                .background(.white)
+                                .clipShape(.circle)
+                            //NOTE: onLongPressGesture requires minimumDuration in iOS18
+                                .onLongPressGesture(minimumDuration: 0.2) {
+                                    viewModel.selectedPlace = location
+                                }
+                        }
+                    }
+                }
+                .onTapGesture { position in
+                    //print("tapped at \(position)")
+                    if let coordinate = proxy.convert(position, from: .local) {
+                        
+                        viewModel.addLocation(at: coordinate)
+                        
+                        //print("tapped at \(coordinate)")
+                        //MOVED TO VIEWMODEL
+                        //                   let newLocation = Location(id: UUID(), name: "New Location", description: "", latitude: coordinate.latitude, longitude: coordinate.longitude)
+                        //                    viewModel.locations.append(newLocation)
+                    }
+                }
+                .sheet(item: $viewModel.selectedPlace) { place in
+                    EditView(location: place) { //newLocation in
+                        
+                        viewModel.update(location: $0)
+                        
+                        //                    MOVED TO VIEWMODEL
+                        //                    if let index = viewModel.locations.firstIndex(of: place) {
+                        //                        viewModel.locations[index] = newLocation
+                        //                    }
+                        //basically it takes the "newLocation" from the locations array and replaces its info with the location from the editView
                     }
                 }
             }
-            .onTapGesture { position in
-                //print("tapped at \(position)")
-                if let coordinate = proxy.convert(position, from: .local) {
-                    //print("tapped at \(coordinate)")
-                   let newLocation = Location(id: UUID(), name: "New Location", description: "", latitude: coordinate.latitude, longitude: coordinate.longitude)
-                    locations.append(newLocation)
-                }
-            }
-            .sheet(item: $selectedPlace) { place in
-                EditView(location: place) { newLocation in
-                    if let index = locations.firstIndex(of: place) {
-                        locations[index] = newLocation
-                    }
-                    //basically it takes the "newLocation" from the locations array and replaces its info with the location from the editView
-                }
-            }
+        } else {
+            //handle authentication
+            Button("Unlock Places", action: viewModel.authenticate)
+                .padding()
+                .background(.blue)
+                .foregroundStyle(.white)
+                .clipShape(.capsule)
         }
     }
 }
