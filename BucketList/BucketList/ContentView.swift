@@ -22,50 +22,75 @@ struct ContentView: View {
     
     @State private var viewModel = ViewModel()
     
+    //MY WAY
+    //@State private var isHybrid = false
+    //Two Straws way:
+    @AppStorage("mapStyle") private var mapStyle = "standard"
+    
     var body: some View {
         if viewModel.isUnlocked {
-            MapReader { proxy in
-                Map(initialPosition: startPosition) {
-                    ForEach(viewModel.locations) { location in
-                        Annotation(location.name, coordinate: location.coordinate) {
-                            Image(systemName: "star.circle")
-                                .resizable()
-                                .foregroundStyle(.red)
-                                .frame(width: 44, height: 44)
-                                .background(.white)
-                                .clipShape(.circle)
-                            //NOTE: onLongPressGesture requires minimumDuration in iOS18
-                                .onLongPressGesture(minimumDuration: 0.2) {
-                                    viewModel.selectedPlace = location
-                                }
+            VStack {
+                MapReader { proxy in
+                    Map(initialPosition: startPosition) {
+                        ForEach(viewModel.locations) { location in
+                            Annotation(location.name, coordinate: location.coordinate) {
+                                Image(systemName: "star.circle")
+                                    .resizable()
+                                    .foregroundStyle(.red)
+                                    .frame(width: 44, height: 44)
+                                    .background(.white)
+                                    .clipShape(.circle)
+                                //NOTE: onLongPressGesture requires minimumDuration in iOS18
+                                    .onLongPressGesture(minimumDuration: 0.2) {
+                                        viewModel.selectedPlace = location
+                                    }
+                            }
+                        }
+                    }
+                    .onTapGesture { position in
+                        //print("tapped at \(position)")
+                        if let coordinate = proxy.convert(position, from: .local) {
+                            
+                            viewModel.addLocation(at: coordinate)
+                            
+                            //print("tapped at \(coordinate)")
+                            //MOVED TO VIEWMODEL
+                            //                   let newLocation = Location(id: UUID(), name: "New Location", description: "", latitude: coordinate.latitude, longitude: coordinate.longitude)
+                            //                    viewModel.locations.append(newLocation)
+                        }
+                    }
+                    //.mapStyle(isHybrid ? .standard : .hybrid)
+                    .mapStyle(mapStyle == "standard" ? .standard : .hybrid)
+                    .sheet(item: $viewModel.selectedPlace) { place in
+                        EditView(location: place) { //newLocation in
+                            
+                            viewModel.update(location: $0)
+                            
+                            //                    MOVED TO VIEWMODEL
+                            //                    if let index = viewModel.locations.firstIndex(of: place) {
+                            //                        viewModel.locations[index] = newLocation
+                            //                    }
+                            //basically it takes the "newLocation" from the locations array and replaces its info with the location from the editView
                         }
                     }
                 }
-                .onTapGesture { position in
-                    //print("tapped at \(position)")
-                    if let coordinate = proxy.convert(position, from: .local) {
-                        
-                        viewModel.addLocation(at: coordinate)
-                        
-                        //print("tapped at \(coordinate)")
-                        //MOVED TO VIEWMODEL
-                        //                   let newLocation = Location(id: UUID(), name: "New Location", description: "", latitude: coordinate.latitude, longitude: coordinate.longitude)
-                        //                    viewModel.locations.append(newLocation)
-                    }
-                }
-                .sheet(item: $viewModel.selectedPlace) { place in
-                    EditView(location: place) { //newLocation in
-                        
-                        viewModel.update(location: $0)
-                        
-                        //                    MOVED TO VIEWMODEL
-                        //                    if let index = viewModel.locations.firstIndex(of: place) {
-                        //                        viewModel.locations[index] = newLocation
-                        //                    }
-                        //basically it takes the "newLocation" from the locations array and replaces its info with the location from the editView
-                    }
-                }
             }
+            Picker("Map mode", selection: $mapStyle) {
+                Text("Standard")
+                    .tag("standard")
+                Text("Hybrid")
+                    .tag("hybrid")
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal)
+//            Button("Change View") {
+//                isHybrid.toggle()
+//            }
+//            .bold()
+//            .padding()
+//            .background(.blue)
+//            .foregroundStyle(.white)
+//            .clipShape(.capsule)
         } else {
             //handle authentication
             Button("Unlock Places", action: viewModel.authenticate)
@@ -73,7 +98,13 @@ struct ContentView: View {
                 .background(.blue)
                 .foregroundStyle(.white)
                 .clipShape(.capsule)
+                .alert("Authentication Error", isPresented: $viewModel.isShowingAuthenticationError) {
+                    Button("OK", role: .cancel) {}
+                } message: {
+                    Text(viewModel.authenticationError)
+                }
         }
+            
     }
 }
  
